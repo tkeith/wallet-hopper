@@ -5,6 +5,9 @@ import { ChakraProvider } from 'providers/Chakra'
 import { useIsMounted } from 'hooks/useIsMounted'
 import { Seo } from 'components/layout/Seo'
 
+// These styles apply to every route in the application
+import '../../globals.css'
+
 export default function App({ Component, pageProps }: AppProps) {
   const isMounted = useIsMounted()
 
