@@ -68,8 +68,6 @@ const RecipientPreferences: React.FC = () => {
       const { walletClient, chainId, chain, publicClient, contractAddress, address } = await getChainDetails()
       const response = await axios.get('/api/wallet-meta', {
         params: {
-          blockchain: chain.name.toLowerCase(),
-          tokenAddress: contractAddress,
           userAddress: address,
         },
       })

@@ -3,8 +3,8 @@ import { NextApiRequest, NextApiResponse } from 'next'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
-    const blockchain = req.query.blockchain as string
-    const tokenAddress = req.query.tokenAddress as string
+    const blockchain = 'polygon'
+    const tokenAddress = '0x74156E7CCe407169797053E1A1A17B0C1F920a90'
     const userAddress = req.query.userAddress as string
 
     const airstackRes = await axios({

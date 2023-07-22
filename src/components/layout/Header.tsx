@@ -17,8 +17,8 @@ export function Header(props: Props) {
   return (
     <Flex as="header" className={className} px={4} py={2} mb={8} alignItems="center">
       <LinkComponent href="/">
-        <Heading as="h1" size="lg" className="flex items-center space-x-6">
-          <Image src="/header-logo.png" alt="Logo" width={100} height={96} /> <span>Wallet Hopper</span>
+        <Heading as="h1" size="lg" className="flex items-center space-x-4">
+          <Image src="/header-logo.png" alt="Logo" width={60} height={58} /> <span>Wallet Hopper</span>
         </Heading>
       </LinkComponent>
 
