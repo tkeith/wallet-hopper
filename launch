@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -e
+cd `dirname $0`
+
+cd /app
+yarn
+yarn build
+echo 'starting with nohup'
+nohup yarn start &

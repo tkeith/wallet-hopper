@@ -1,26 +1,26 @@
 import { ethers, network, run } from 'hardhat'
 
 async function main() {
-  console.log('Deploying Message...')
+  console.log('Deploying Wallet Hopper...')
 
   const args: any[] = []
-  const Message = await ethers.getContractFactory('Message')
-  const message = await Message.deploy(...args)
+  const WalletHopper = await ethers.getContractFactory('WalletHopper')
+  const walletHopper = await WalletHopper.deploy(...args)
 
-  await message.deployed()
+  await walletHopper.deployed()
 
-  console.log(`Message deployed to ${message.address}`)
+  console.log(`Wallet Hopper deployed to ${walletHopper.address}`)
 
-  // no need to verify on localhost or hardhat
-  if (network.config.chainId != 31337 && process.env.ETHERSCAN_API_KEY) {
+  if (network.config.chainId != 31337) {
     console.log(`Waiting for block confirmation...`)
-    await message.deployTransaction.wait(5)
+    await walletHopper.deployTransaction.wait(10)
 
     console.log('Verifying contract...')
     try {
       run('verify:verify', {
-        address: message.address,
+        address: walletHopper.address,
         constructorArguments: args,
+        contract: 'contracts/WalletHopper.sol:WalletHopper',
       })
     } catch (e) {
       console.log(e)

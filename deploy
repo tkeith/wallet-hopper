@@ -1,0 +1,8 @@
+#!/bin/bash
+
+set -e
+cd `dirname $0`
+
+ssh root@wallethopper.com bash -c "pkill -f node || true"
+rsync -aHvz --delete --exclude=.next --exclude=node_modules --exclude=contracts/.env --exclude=deploy . root@wallethopper.com:/app
+ssh root@wallethopper.com /app/launch
