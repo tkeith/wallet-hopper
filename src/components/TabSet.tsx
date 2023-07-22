@@ -10,7 +10,7 @@ export default function TabSet() {
   }
 
   return (
-    <div>
+    <div className="max-w-md m-auto">
       <div className="sm:hidden">
         <label htmlFor="tabs" className="sr-only">
           Select a tab

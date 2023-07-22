@@ -13,6 +13,7 @@ import TabSet from 'components/TabSet'
 
 export const CHAINS: Record<number, chains.Chain> = {
   [137]: chains.polygon,
+  [1]: chains.mainnet,
 }
 
 type AsyncFunction<TArgs extends any[], TResult> = (...args: TArgs) => Promise<TResult>
@@ -48,10 +49,11 @@ const RecipientPreferences: React.FC = () => {
 
     const chain = CHAINS[chainId]
 
-    const publicClient = createPublicClient({
-      chain: chain,
-      transport: http(),
-    })
+    const publicClient = () =>
+      createPublicClient({
+        chain: chain,
+        transport: http(),
+      })
 
     const contractAddress = (walletHopperAddress as Record<number, `0x${string}`>)[chainId]
     if (!contractAddress) {
@@ -113,7 +115,15 @@ const RecipientPreferences: React.FC = () => {
       args: ['ipfs:' + cid],
     })
     toast.info(`Generated transaction, waiting for success...`)
-    await publicClient.waitForTransactionReceipt({ hash: txnHash })
+    while (true) {
+      try {
+        await publicClient().waitForTransactionReceipt({ hash: txnHash })
+        break
+      } catch (error) {
+        // async sleep 3 seconds
+        await new Promise((resolve) => setTimeout(resolve, 3000))
+      }
+    }
     return { txnHash }
   }
 

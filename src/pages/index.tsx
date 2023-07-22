@@ -53,19 +53,9 @@ export default function Home() {
 
     const chain = CHAINS[chainId]
 
-    const publicClient = createPublicClient({
-      chain: chain,
-      transport: http(),
-    })
-
-    const contractAddress = (walletHopperAddress as Record<number, `0x${string}`>)[chainId]
-    if (!contractAddress) {
-      toast.error('Contract not deployed on this network')
-    }
-
     const [address] = await walletClient.getAddresses()
 
-    return { walletClient, chainId, chain, publicClient, contractAddress, address }
+    return { walletClient, chainId, chain, address }
   })
 
   useEffect(() => {
@@ -85,8 +75,28 @@ export default function Home() {
         const recipientData = JSON.parse(response.data.data)
 
         for (const preferredAsset of recipientData.preferredAssets) {
-          if (preferredAsset.symbol === asset && preferredAsset.chain == (await getChainDetails()).chain.name.toLowerCase()) {
-            status = { status: 'success' }
+          if (preferredAsset.chain == (await getChainDetails()).chain.name.toLowerCase()) {
+            console.log('correct chain')
+            if (preferredAsset.symbol === asset) {
+              //correct chain and asset
+              status = { status: 'success' }
+            } else {
+              console.log('correct chain, incorrect asset')
+              console.log('need to swap')
+              status = {
+                status: 'fail',
+                error: 'Incorrect asset',
+                suggestion: {
+                  description: `To complete this transaction, swap ${asset} to ${preferredAsset.symbol}`,
+                  actionText: 'Swap and send',
+                  actionFunction: () => {
+                    alert('hi')
+                  },
+                },
+              }
+            }
+          } else {
+            console.log('incorrect chain -- need to bridge')
           }
 
           break
@@ -110,7 +120,7 @@ export default function Home() {
   return (
     <>
       <TabSet />
-      <div className="p-4 max-w-md mx-auto mt-8 bg-white shadow-lg rounded-lg">
+      <div className="p-4 max-w-md mx-auto mt-8 bg-white shadow-lg rounded-lg mb-8">
         <input
           className="mb-2 p-2 border rounded w-full"
           type="text"
