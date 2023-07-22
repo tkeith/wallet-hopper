@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const tokenURI = airstackRes.data.data.TokenBalances.TokenBalance[0].tokenNfts.tokenURI
     const pointerIndex = tokenURI.indexOf('&pointer=') + '&pointer='.length
     const pointerValue = tokenURI.substring(pointerIndex)
-    let data: string = ''
+    let data: string = '{}'
 
     if (pointerValue.startsWith('data:')) {
       // return the raw data

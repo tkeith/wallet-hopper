@@ -11,7 +11,7 @@ import TabSet from 'components/TabSet'
 
 // Modal.setAppElement('#root')
 
-const CHAINS: Record<number, chains.Chain> = {
+export const CHAINS: Record<number, chains.Chain> = {
   [137]: chains.polygon,
 }
 
