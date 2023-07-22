@@ -1,11 +1,5 @@
-import { Head } from 'components/layout/Head'
+import TabSet from 'components/TabSet'
 
 export default function Home() {
-  return (
-    <>
-      <Head />
-
-      <main></main>
-    </>
-  )
+  return <></>
 }

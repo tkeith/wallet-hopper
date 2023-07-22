@@ -14,8 +14,8 @@ export default defineConfig({
     hardhat({
       project: './contracts',
       deployments: {
-        Message: {
-          11155111: '0xcc5a0d6268d70811edad77799f2168afe6382e89',
+        WalletHopper: {
+          137: '0x74156E7CCe407169797053E1A1A17B0C1F920a90',
         },
       },
     }),

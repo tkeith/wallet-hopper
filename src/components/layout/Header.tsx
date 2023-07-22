@@ -5,6 +5,7 @@ import { LinkComponent } from './LinkComponent'
 import { ThemeSwitcher } from './ThemeSwitcher'
 import { PassportScore } from './PassportScore'
 import { Web3Button } from '@web3modal/react'
+import Image from 'next/image'
 
 interface Props {
   className?: string
@@ -14,10 +15,10 @@ export function Header(props: Props) {
   const className = props.className ?? ''
 
   return (
-    <Flex as="header" className={className} bg={useColorModeValue('gray.100', 'gray.900')} px={4} py={2} mb={8} alignItems="center">
+    <Flex as="header" className={className} px={4} py={2} mb={8} alignItems="center">
       <LinkComponent href="/">
-        <Heading as="h1" size="md">
-          {SITE_NAME}
+        <Heading as="h1" size="lg" className="flex items-center space-x-6">
+          <Image src="/header-logo.png" alt="Logo" width={100} height={96} /> <span>Wallet Hopper</span>
         </Heading>
       </LinkComponent>
 
@@ -26,7 +27,6 @@ export function Header(props: Props) {
       <Flex alignItems="center" gap={4}>
         <PassportScore />
         <Web3Button icon="hide" label="Connect" />
-        <ThemeSwitcher />
       </Flex>
     </Flex>
   )
