@@ -14,7 +14,6 @@ export function Layout(props: Props) {
     <Box margin="0 auto" minH="100vh">
       <Container maxW="container.lg">
         <Header />
-        <TabSet />
         {props.children}
       </Container>
 

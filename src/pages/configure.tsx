@@ -6,6 +6,10 @@ import { createPublicClient, createWalletClient, custom, http } from 'viem'
 import { mainnet, polygon } from 'viem/chains'
 import { walletHopperABI, walletHopperAddress } from 'abis'
 import * as chains from 'viem/chains'
+import Modal from 'react-modal'
+import TabSet from 'components/TabSet'
+
+// Modal.setAppElement('#root')
 
 const CHAINS: Record<number, chains.Chain> = {
   [137]: chains.polygon,
@@ -32,6 +36,8 @@ function memoizeAsync<TArgs extends any[], TResult>(fn: AsyncFunction<TArgs, TRe
 const RecipientPreferences: React.FC = () => {
   const [jsonInput, setJsonInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [modalIsOpen, setIsOpen] = useState(false)
+  const [attestation, setAttestation] = useState(null)
 
   const getChainDetails = memoizeAsync(async function () {
     const walletClient = createWalletClient({
@@ -127,7 +133,7 @@ const RecipientPreferences: React.FC = () => {
         const { txnHash } = res
         toast.success(
           <>
-            <a target="_blank" href={chain.blockExplorers!.default.url + '/tx/' + txnHash}>
+            <a target="_blank" rel="noreferrer" href={chain.blockExplorers!.default.url + '/tx/' + txnHash}>
               Successfully updated on-chain pointer. Txn: {txnHash}
             </a>
           </>
@@ -149,25 +155,96 @@ const RecipientPreferences: React.FC = () => {
     }
   }
 
+  function openModal() {
+    setIsOpen(true)
+  }
+
+  function closeModal() {
+    setIsOpen(false)
+  }
+
+  const handleAddAttestation = async () => {
+    openModal()
+    window.open('https://attest.wallethopper.com/attest?primaryAddress=' + (await getChainDetails()).address, '_blank')
+    setIsLoading(true)
+    const checkCookie = setInterval(() => {
+      const attestationCookie = document.cookie.split('; ').find((row) => row.startsWith('attestation'))
+      if (attestationCookie) {
+        const attestationValue = attestationCookie.split('=')[1]
+        setAttestation(JSON.parse(decodeURIComponent(attestationValue)))
+        setIsLoading(false)
+        clearInterval(checkCookie)
+        // Delete the attestation cookie after using it
+        document.cookie = 'attestation=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=wallethopper.com;'
+      }
+    }, 1000)
+  }
+
+  const handleConfirmAttestation = () => {
+    const data = getData()
+    if (data !== null) {
+      data.attestations = data.attestations || {}
+      // @ts-ignore
+      data.attestations[attestation.attestedWallet] = attestation.attestation
+      setJsonInput(JSON.stringify(data, null, 2))
+      closeModal()
+      toast.success('Attestation added successfully')
+    }
+  }
+
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Configure Recipient Preferences</h1>
-      <textarea className="w-full h-64 p-2 border rounded mb-4" value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} />
-      <button className="px-4 py-2 bg-blue-500 text-white rounded" onClick={handleSave} disabled={isLoading}>
-        {isLoading ? 'Saving...' : 'Save preferences'}
-      </button>
-      <ToastContainer
-        position="bottom-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
-    </div>
+    <>
+      <TabSet />
+      <div className="p-4">
+        <h1 className="text-2xl font-bold mb-4">Configure Recipient Preferences</h1>
+        <button className="px-4 py-2 bg-blue-500 text-white rounded mb-4" onClick={handleAddAttestation}>
+          Add attestation
+        </button>
+        <textarea className="w-full h-64 p-2 border rounded mb-4" value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} />
+        <button className="px-4 py-2 bg-blue-500 text-white rounded" onClick={handleSave} disabled={isLoading}>
+          {isLoading ? 'Saving...' : 'Save preferences'}
+        </button>
+        <Modal
+          isOpen={modalIsOpen}
+          onRequestClose={closeModal}
+          contentLabel="Attestation Modal"
+          className="p-4 bg-white rounded shadow-lg outline-none mx-auto"
+          style={{
+            overlay: {
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+            content: {
+              width: '800px',
+              overflow: 'hidden',
+            },
+          }}>
+          {isLoading
+            ? 'Waiting for attestation...'
+            : attestation && (
+                <div style={{ overflow: 'auto', maxHeight: '350px' }}>
+                  <h2 className="text-xl font-bold mb-2">Attestation</h2>
+                  <pre className="bg-gray-100 p-2 rounded">{JSON.stringify(attestation, null, 2)}</pre>
+                  <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded" onClick={handleConfirmAttestation}>
+                    Confirm
+                  </button>
+                </div>
+              )}
+        </Modal>
+        <ToastContainer
+          position="bottom-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+        />
+      </div>
+    </>
   )
 }
 
