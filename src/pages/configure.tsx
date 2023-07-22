@@ -83,7 +83,6 @@ const RecipientPreferences: React.FC = () => {
             {
               timestamp: new Date().toISOString(),
               primaryAddress: address,
-              primaryChain: chain.name.toLowerCase(),
               preferredAssets: [{ chain: 'ethereum', address: address, symbol: 'ETH' }],
               addresses: [address],
               attestations: {},
