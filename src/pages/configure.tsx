@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -11,20 +11,29 @@ const CHAINS: Record<number, chains.Chain> = {
   [137]: chains.polygon,
 }
 
+type AsyncFunction<TArgs extends any[], TResult> = (...args: TArgs) => Promise<TResult>
+
+function memoizeAsync<TArgs extends any[], TResult>(fn: AsyncFunction<TArgs, TResult>): AsyncFunction<TArgs, TResult> {
+  const cache = new Map<string, Promise<TResult>>()
+
+  return async (...args: TArgs): Promise<TResult> => {
+    const key = JSON.stringify(args)
+
+    if (cache.has(key)) {
+      return (await cache.get(key))!
+    }
+
+    const resultPromise = fn(...args)
+    cache.set(key, resultPromise)
+    return await resultPromise
+  }
+}
+
 const RecipientPreferences: React.FC = () => {
   const [jsonInput, setJsonInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const getData = () => {
-    try {
-      return JSON.parse(jsonInput)
-    } catch (error) {
-      toast.error('Invalid JSON')
-      return null
-    }
-  }
-
-  async function updateOnChainPointer(cid: string) {
+  const getChainDetails = memoizeAsync(async function () {
     const walletClient = createWalletClient({
       transport: custom((window as any).ethereum),
     })
@@ -41,12 +50,57 @@ const RecipientPreferences: React.FC = () => {
     const contractAddress = (walletHopperAddress as Record<number, `0x${string}`>)[chainId]
     if (!contractAddress) {
       toast.error('Contract not deployed on this network')
-      return null
     }
 
     const [address] = await walletClient.getAddresses()
 
-    // const { request } = await walletClient.simulateContract()
+    return { walletClient, chainId, chain, publicClient, contractAddress, address }
+  })
+
+  useEffect(() => {
+    ;(async function () {
+      const { walletClient, chainId, chain, publicClient, contractAddress, address } = await getChainDetails()
+      const response = await axios.get('/api/wallet-meta', {
+        params: {
+          blockchain: chain.name.toLowerCase(),
+          tokenAddress: contractAddress,
+          userAddress: address,
+        },
+      })
+      if (response.data && (JSON.parse(response.data.data) as any).timestamp) {
+        const jsonData = JSON.parse(response.data.data)
+        jsonData.timestamp = new Date().toISOString()
+        setJsonInput(JSON.stringify(jsonData, null, 2))
+      } else {
+        setJsonInput(
+          JSON.stringify(
+            {
+              timestamp: new Date().toISOString(),
+              primaryAddress: address,
+              primaryChain: chain.name.toLowerCase(),
+              preferredAssets: [{ chain: 'ethereum', address: address, symbol: 'ETH' }],
+              addresses: [address],
+              attestations: {},
+            },
+            null,
+            2
+          )
+        )
+      }
+    })()
+  }, [])
+
+  const getData = () => {
+    try {
+      return JSON.parse(jsonInput)
+    } catch (error) {
+      toast.error('Invalid JSON')
+      return null
+    }
+  }
+
+  async function updateOnChainPointer(cid: string) {
+    const { walletClient, chainId, chain, publicClient, contractAddress, address } = await getChainDetails()
     const txnHash = await walletClient.writeContract({
       account: address,
       address: contractAddress,
@@ -57,22 +111,25 @@ const RecipientPreferences: React.FC = () => {
     })
     toast.info(`Generated transaction, waiting for success...`)
     await publicClient.waitForTransactionReceipt({ hash: txnHash })
-    return { txnHash, chain }
+    return { txnHash }
   }
 
   const saveData = async (data: any) => {
+    const { chain } = await getChainDetails()
     try {
       setIsLoading(true)
-      const response = await axios.post('/api/store', { data: JSON.stringify(data) })
+      const response = await axios.post('/api/store', { data: JSON.stringify(data, null, 2) })
       toast.info(`Successfully stored to IPFS: ${response.data.cid}`)
       const res = await updateOnChainPointer(response.data.cid)
       if (!res) {
         toast.error('Error putting pointer on chain')
       } else {
-        const { txnHash, chain } = res
+        const { txnHash } = res
         toast.success(
           <>
-            Successfully updated on-chain pointer. Txn: <a href={chain.blockExplorers!.default.url + '/tx/' + txnHash}>{txnHash}</a>
+            <a target="_blank" href={chain.blockExplorers!.default.url + '/tx/' + txnHash}>
+              Successfully updated on-chain pointer. Txn: {txnHash}
+            </a>
           </>
         )
       }
