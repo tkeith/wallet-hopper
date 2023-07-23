@@ -8,7 +8,7 @@ import { CHAINS } from './configure'
 import { walletHopperAddress } from 'abis'
 import { FusionSDK, PrivateKeyProviderConnector } from '@1inch/fusion-sdk'
 import { ethers } from 'ethers'
-import { SPOKEPOOL_ABI } from 'misc'
+import { SPOKEPOOL_ABI, ZKBOB_DIRECT_DEPOSIT_ABI } from 'misc'
 
 type AssetType = 'ETH' | 'SDAI' | 'APE' | 'USDC' | 'USDT'
 
@@ -159,6 +159,7 @@ export default function Home() {
                         await new Promise((resolve) => setTimeout(resolve, 3000))
                       }
                     }
+                    toast.success('Swap transaction successful')
 
                     // now send the received ERC-20 token
                     const tokenContract = new ethers.Contract(
@@ -179,69 +180,123 @@ export default function Home() {
                         await new Promise((resolve) => setTimeout(resolve, 3000))
                       }
                     }
+                    toast.success('Transaction successful')
                   },
                 },
               }
             }
           } else {
-            console.log('incorrect chain -- need to across bridge')
-            status = {
-              status: 'fail',
-              error: 'Incorrect asset',
-              suggestion: {
-                description: `To complete this transaction, bridge from ${(await getChainDetails()).chain.name.toLowerCase()} to ${
-                  preferredAsset.chain
-                }`,
-                actionText: 'Swap and send',
+            if (preferredAsset.chain == 'zkbob') {
+              status = {
+                status: 'fail',
+                error: 'Recipient wants to receive via zkBob',
+                suggestion: {
+                  description: `To complete this transaction, complete a zkBob direct deposit`,
+                  actionText: 'Direct deposit',
 
-                actionFunction: async () => {
-                  let txnHash
-                  try {
-                    txnHash = await (
-                      await getChainDetails()
-                    ).walletClient.writeContract({
-                      account: (await getChainDetails()).address,
-                      address: '0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5', // across bridge
-                      abi: SPOKEPOOL_ABI,
-                      chain: CHAINS[await (await getChainDetails()).walletClient.getChainId()],
-                      // @ts-ignore
-                      functionName: 'deposit',
-                      args: [
-                        // recipient address
-                        paymentDestinationAddress,
-                        // originToken
-                        tokenAddressBySymbol[paymentAsset],
-                        // amount
-                        ethers.utils.parseUnits(paymentAmount, 1).toString(),
-                        // destinationChainId
-                        chainIdByName[preferredAsset.chain],
-                        //relayerFeePct
-                        1,
-                        // quoteTimestamp
-                        Math.floor(Date.now() / 1000),
-                        // message
-                        '0x',
-                        // maxCount
-                        '115792089237316195423570985008687907853269984665640564039457584007913129639935',
-                      ],
-                    })
-                  } catch (error) {
-                    toast.error('Failed to submit bridge transaction')
-                    return
-                  }
-                  toast.info(`Generated bridge transaction, waiting for success...`)
-                  while (true) {
+                  actionFunction: async () => {
+                    let txnHash
                     try {
-                      // @ts-ignore
-                      await (await getChainDetails()).publicClient().waitForTransactionReceipt({ hash: txnHash })
-                      break
+                      txnHash = await (
+                        await getChainDetails()
+                      ).walletClient.writeContract({
+                        account: (await getChainDetails()).address,
+                        address: '0x668c5286ead26fac5fa944887f9d2f20f7ddf289', // zkbob direct deposit contract
+                        abi: ZKBOB_DIRECT_DEPOSIT_ABI,
+                        chain: CHAINS[await (await getChainDetails()).walletClient.getChainId()],
+                        // @ts-ignore
+                        functionName: 'directDeposit',
+                        args: [
+                          // fallbackUser
+                          (
+                            await getChainDetails()
+                          ).address,
+                          // amount
+                          paymentAmount,
+                          // zkAddress
+                          paymentDestinationAddress,
+                        ],
+                      })
                     } catch (error) {
-                      // async sleep 3 seconds
-                      await new Promise((resolve) => setTimeout(resolve, 3000))
+                      toast.error('Failed to submit zkBob direct deposit transaction')
+                      return
                     }
-                  }
+                    toast.info(`Generated zkBob transaction, waiting for success...`)
+                    while (true) {
+                      try {
+                        // @ts-ignore
+                        await (await getChainDetails()).publicClient().waitForTransactionReceipt({ hash: txnHash })
+                        break
+                      } catch (error) {
+                        // async sleep 3 seconds
+                        await new Promise((resolve) => setTimeout(resolve, 3000))
+                      }
+                    }
+                    toast.success('zkBob transaction successful')
+                  },
                 },
-              },
+              }
+            } else {
+              console.log('incorrect chain -- need to bridge')
+              status = {
+                status: 'fail',
+                error: 'Incorrect asset',
+                suggestion: {
+                  description: `To complete this transaction, bridge from ${(await getChainDetails()).chain.name.toLowerCase()} to ${
+                    preferredAsset.chain
+                  }`,
+                  actionText: 'Swap and send',
+
+                  actionFunction: async () => {
+                    let txnHash
+                    try {
+                      txnHash = await (
+                        await getChainDetails()
+                      ).walletClient.writeContract({
+                        account: (await getChainDetails()).address,
+                        address: '0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5', // across bridge
+                        abi: SPOKEPOOL_ABI,
+                        chain: CHAINS[await (await getChainDetails()).walletClient.getChainId()],
+                        // @ts-ignore
+                        functionName: 'deposit',
+                        args: [
+                          // recipient address
+                          paymentDestinationAddress,
+                          // originToken
+                          tokenAddressBySymbol[paymentAsset],
+                          // amount
+                          ethers.utils.parseUnits(paymentAmount, 1).toString(),
+                          // destinationChainId
+                          chainIdByName[preferredAsset.chain],
+                          //relayerFeePct
+                          1,
+                          // quoteTimestamp
+                          Math.floor(Date.now() / 1000),
+                          // message
+                          '0x',
+                          // maxCount
+                          '115792089237316195423570985008687907853269984665640564039457584007913129639935',
+                        ],
+                      })
+                    } catch (error) {
+                      toast.error('Failed to submit bridge transaction')
+                      return
+                    }
+                    toast.info(`Generated bridge transaction, waiting for success...`)
+                    while (true) {
+                      try {
+                        // @ts-ignore
+                        await (await getChainDetails()).publicClient().waitForTransactionReceipt({ hash: txnHash })
+                        break
+                      } catch (error) {
+                        // async sleep 3 seconds
+                        await new Promise((resolve) => setTimeout(resolve, 3000))
+                      }
+                    }
+                    toast.success('Bridge transaction successful')
+                  },
+                },
+              }
             }
           }
 
