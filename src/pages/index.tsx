@@ -8,8 +8,9 @@ import { CHAINS } from './configure'
 import { walletHopperAddress } from 'abis'
 import { FusionSDK, PrivateKeyProviderConnector } from '@1inch/fusion-sdk'
 import { ethers } from 'ethers'
+import { SPOKEPOOL_ABI } from 'misc'
 
-type AssetType = 'ETH' | 'APE' | 'USDC' | 'USDT'
+type AssetType = 'ETH' | 'SDAI' | 'APE' | 'USDC' | 'USDT'
 
 interface TransactionStatus {
   status: 'success' | 'fail' | 'unknown'
@@ -26,6 +27,12 @@ const tokenAddressBySymbol: Record<string, string> = {
   APE: '0x4d224452801aced8b2f0aebe155379bb5d594381',
   USDT: '0xdac17f958d2ee523a2206206994597c13d831ec7',
   WETH: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+  SDAI: '0x83f20f44975d03b1b09e64809b757c47f942beea',
+}
+
+const chainIdByName: Record<string, number> = {
+  ethereum: 1,
+  polygon: 137,
 }
 
 type AsyncFunction<TArgs extends any[], TResult> = (...args: TArgs) => Promise<TResult>
@@ -47,9 +54,9 @@ function memoizeAsync<TArgs extends any[], TResult>(fn: AsyncFunction<TArgs, TRe
 }
 
 export default function Home() {
-  const [address, setAddress] = useState('')
-  const [asset, setAsset] = useState<AssetType>('ETH')
-  const [amount, setAmount] = useState('')
+  const [paymentDestinationAddress, setPaymentDestinationAddress] = useState('')
+  const [paymentAsset, setPaymentAsset] = useState<AssetType>('ETH')
+  const [paymentAmount, setPaymentAmount] = useState('')
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus | null>(null)
 
   const getChainDetails = memoizeAsync(async function () {
@@ -74,7 +81,7 @@ export default function Home() {
 
   useEffect(() => {
     setTransactionStatus(null)
-  }, [address, asset, amount])
+  }, [paymentDestinationAddress, paymentAsset, paymentAmount])
 
   const checkValidity = async () => {
     ;(async function () {
@@ -82,7 +89,7 @@ export default function Home() {
 
       const response = await axios.get('/api/wallet-meta', {
         params: {
-          userAddress: address,
+          userAddress: paymentDestinationAddress,
         },
       })
       if (response.data && (JSON.parse(response.data.data) as any).timestamp) {
@@ -91,7 +98,7 @@ export default function Home() {
         for (const preferredAsset of recipientData.preferredAssets) {
           if (preferredAsset.chain == (await getChainDetails()).chain.name.toLowerCase()) {
             console.log('correct chain')
-            if (preferredAsset.symbol === asset) {
+            if (preferredAsset.symbol === paymentAsset) {
               console.log('correct chain, correct asset')
               status = { status: 'success' }
             } else {
@@ -101,13 +108,13 @@ export default function Home() {
                 status: 'fail',
                 error: 'Incorrect asset',
                 suggestion: {
-                  description: `To complete this transaction, swap ${asset} to ${preferredAsset.symbol}`,
+                  description: `To complete this transaction, swap ${paymentAsset} to ${preferredAsset.symbol}`,
                   actionText: 'Swap and send',
                   actionFunction: async () => {
                     const caller = (await getChainDetails()).address
-                    const swapFromTokenAddress = tokenAddressBySymbol[asset]
+                    const swapFromTokenAddress = tokenAddressBySymbol[paymentAsset]
                     const swapToTokenAddress = tokenAddressBySymbol[preferredAsset.symbol]
-                    const swapAmount = ethers.utils.parseUnits(amount, 1).toString()
+                    const swapAmount = ethers.utils.parseUnits(paymentAmount, 1).toString()
                     const url = `https://api.1inch.io/v5.2/1/swap?src=${swapFromTokenAddress}&dst=${swapToTokenAddress}&amount=${swapAmount}&from=${caller}&slippage=1&disableEstimate=false&includeTokensInfo=true&includeProtocols=true&compatibility=true&allowPartialFill=false`
                     let response
                     try {
@@ -159,7 +166,7 @@ export default function Home() {
                       ['function transfer(address to, uint256 amount)'],
                       new ethers.providers.Web3Provider((window as any).ethereum)
                     )
-                    txnHash = await tokenContract.transfer(address, swapAmount)
+                    txnHash = await tokenContract.transfer(paymentDestinationAddress, swapAmount)
 
                     toast.info(`Generated send transaction, waiting for success...`)
                     while (true) {
@@ -177,7 +184,65 @@ export default function Home() {
               }
             }
           } else {
-            console.log('incorrect chain -- need to bridge')
+            console.log('incorrect chain -- need to across bridge')
+            status = {
+              status: 'fail',
+              error: 'Incorrect asset',
+              suggestion: {
+                description: `To complete this transaction, bridge from ${(await getChainDetails()).chain.name.toLowerCase()} to ${
+                  preferredAsset.chain
+                }`,
+                actionText: 'Swap and send',
+
+                actionFunction: async () => {
+                  let txnHash
+                  try {
+                    txnHash = await (
+                      await getChainDetails()
+                    ).walletClient.writeContract({
+                      account: (await getChainDetails()).address,
+                      address: '0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5', // across bridge
+                      abi: SPOKEPOOL_ABI,
+                      chain: CHAINS[await (await getChainDetails()).walletClient.getChainId()],
+                      // @ts-ignore
+                      functionName: 'deposit',
+                      args: [
+                        // recipient address
+                        paymentDestinationAddress,
+                        // originToken
+                        tokenAddressBySymbol[paymentAsset],
+                        // amount
+                        ethers.utils.parseUnits(paymentAmount, 1).toString(),
+                        // destinationChainId
+                        chainIdByName[preferredAsset.chain],
+                        //relayerFeePct
+                        1,
+                        // quoteTimestamp
+                        Math.floor(Date.now() / 1000),
+                        // message
+                        '0x',
+                        // maxCount
+                        '115792089237316195423570985008687907853269984665640564039457584007913129639935',
+                      ],
+                    })
+                  } catch (error) {
+                    toast.error('Failed to submit bridge transaction')
+                    return
+                  }
+                  toast.info(`Generated bridge transaction, waiting for success...`)
+                  while (true) {
+                    try {
+                      // @ts-ignore
+                      await (await getChainDetails()).publicClient().waitForTransactionReceipt({ hash: txnHash })
+                      break
+                    } catch (error) {
+                      // async sleep 3 seconds
+                      await new Promise((resolve) => setTimeout(resolve, 3000))
+                    }
+                  }
+                },
+              },
+            }
           }
 
           break
@@ -206,17 +271,23 @@ export default function Home() {
           className="mb-2 p-2 border rounded w-full"
           type="text"
           placeholder="Address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
+          value={paymentDestinationAddress}
+          onChange={(e) => setPaymentDestinationAddress(e.target.value)}
         />
         <div className="flex space-x-2 mb-2">
-          <select className="p-2 border rounded w-1/2" value={asset} onChange={(e) => setAsset(e.target.value as AssetType)}>
+          <select className="p-2 border rounded w-1/2" value={paymentAsset} onChange={(e) => setPaymentAsset(e.target.value as AssetType)}>
             <option value="ETH">ETH</option>
             <option value="APE">APE</option>
             <option value="USDC">USDC</option>
             <option value="USDT">USDT</option>
           </select>
-          <input className="p-2 border rounded w-1/2" type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <input
+            className="p-2 border rounded w-1/2"
+            type="number"
+            placeholder="Amount"
+            value={paymentAmount}
+            onChange={(e) => setPaymentAmount(e.target.value)}
+          />
         </div>
         {transactionStatus?.status !== 'success' && (
           <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={checkValidity}>

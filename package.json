@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@1inch/fusion-sdk": "^0.1.8",
+    "@across-protocol/sdk-v2": "^0.14.10",
     "@chakra-ui/icons": "2.0.14",
     "@chakra-ui/react": "2.4.4",
     "@emotion/react": "^11",
