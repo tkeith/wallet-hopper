@@ -981,3 +981,11 @@ export const ERC20_ABI = [
     type: 'event',
   },
 ]
+
+export const TOKEN_ADDRESS_BY_SYMBOL: Record<string, Record<string, string>> = {
+  USDC: { ethereum: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', polygon: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174' },
+  APE: { ethereum: '0x4d224452801aced8b2f0aebe155379bb5d594381' },
+  USDT: { ethereum: '0xdac17f958d2ee523a2206206994597c13d831ec7', polygon: '0xc2132d05d31c914a87c6611c10748aeb04b58e8f' },
+  WETH: { ethereum: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', polygon: '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' },
+  SDAI: { ethereum: '0x83f20f44975d03b1b09e64809b757c47f942beea' },
+}
