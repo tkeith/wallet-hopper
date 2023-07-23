@@ -116,6 +116,40 @@ export default function Home() {
     toast.success('Approval transaction successful')
   }
 
+  async function send(tokenAddress: string, recipient: string, amount: string | number) {
+    toast.info('Sending tokens...')
+    let txnHash
+    const writeContractArgs = {
+      account: (await getChainDetails()).address,
+      address: tokenAddress as `0x${string}`, // zkbob direct deposit contract
+      abi: ERC20_ABI,
+      chain: CHAINS[await (await getChainDetails()).walletClient.getChainId()],
+      // @ts-ignore
+      functionName: 'transfer',
+      args: [recipient, amount.toString()],
+    }
+    console.log('writeContractArgs', writeContractArgs)
+    try {
+      txnHash = await (await getChainDetails()).walletClient.writeContract(writeContractArgs)
+    } catch (error) {
+      console.log(error)
+      console.log((error as any).trace)
+      toast.error('Failed to submit send transaction')
+    }
+    toast.info('Transaction sent, waiting for success...')
+    while (true) {
+      try {
+        // @ts-ignore
+        await (await getChainDetails()).publicClient().waitForTransactionReceipt({ hash: txnHash })
+        break
+      } catch (error) {
+        // async sleep 3 seconds
+        await new Promise((resolve) => setTimeout(resolve, 3000))
+      }
+    }
+    toast.success('Tokens sent successfully')
+  }
+
   const checkValidity = async () => {
     ;(async function () {
       let status: TransactionStatus | null = null
@@ -183,7 +217,7 @@ export default function Home() {
                       toast.error('failed to generate swap')
                       return
                     }
-                    let txnHash = txn.hash
+                    let txnHash = txn.hash as `0x${string}`
 
                     toast.info(`Generated swap transaction, waiting for success...`)
                     while (true) {
@@ -198,26 +232,7 @@ export default function Home() {
                     }
                     toast.success('Swap transaction successful')
 
-                    // now send the received ERC-20 token
-                    const tokenContract = new ethers.Contract(
-                      swapToTokenAddress,
-                      ['function transfer(address to, uint256 amount)'],
-                      new ethers.providers.Web3Provider((window as any).ethereum)
-                    )
-                    txnHash = await tokenContract.transfer(paymentDestinationAddress, swapAmount)
-
-                    toast.info(`Generated send transaction, waiting for success...`)
-                    while (true) {
-                      try {
-                        // @ts-ignore
-                        await (await getChainDetails()).publicClient().waitForTransactionReceipt({ hash: txnHash })
-                        break
-                      } catch (error) {
-                        // async sleep 3 seconds
-                        await new Promise((resolve) => setTimeout(resolve, 3000))
-                      }
-                    }
-                    toast.success('Transaction successful')
+                    send(swapToTokenAddress, paymentDestinationAddress, swapAmount)
                   },
                 },
               }
