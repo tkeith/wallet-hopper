@@ -12,8 +12,6 @@ import * as misc from '../misc'
 import { configureChains } from 'wagmi'
 import { alchemyProvider } from 'wagmi/providers/alchemy'
 
-// Modal.setAppElement('#root')
-
 export const CHAINS: Record<number, chains.Chain> = {
   [137]: chains.polygon,
   [1]: chains.mainnet,

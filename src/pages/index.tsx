@@ -81,9 +81,9 @@ export default function Home() {
     let txnHash
     const writeContractArgs = {
       account: (await getChainDetails()).address,
-      address: tokenAddress as `0x${string}`, // zkbob direct deposit contract
+      address: tokenAddress as `0x${string}`,
       abi: ERC20_ABI,
-      chain: CHAINS[await (await getChainDetails()).walletClient.getChainId()],
+      chain: CHAINS[await(await getChainDetails()).walletClient.getChainId()],
       // @ts-ignore
       functionName: 'approve',
       args: [spender, 10000000000000000000000],
@@ -115,9 +115,9 @@ export default function Home() {
     let txnHash
     const writeContractArgs = {
       account: (await getChainDetails()).address,
-      address: tokenAddress as `0x${string}`, // zkbob direct deposit contract
+      address: tokenAddress as `0x${string}`,
       abi: ERC20_ABI,
-      chain: CHAINS[await (await getChainDetails()).walletClient.getChainId()],
+      chain: CHAINS[await(await getChainDetails()).walletClient.getChainId()],
       // @ts-ignore
       functionName: 'transfer',
       args: [recipient, amount.toString()],
