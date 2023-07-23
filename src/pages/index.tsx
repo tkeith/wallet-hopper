@@ -10,7 +10,7 @@ import { FusionSDK, PrivateKeyProviderConnector } from '@1inch/fusion-sdk'
 import { ethers } from 'ethers'
 import { SPOKEPOOL_ABI, ZKBOB_DIRECT_DEPOSIT_ABI } from 'misc'
 import { configureChains } from 'wagmi'
-import { alchemyProvider } from 'wagmi/dist/providers/alchemy'
+import { alchemyProvider } from 'wagmi/providers/alchemy'
 
 type AssetType = 'ETH' | 'SDAI' | 'APE' | 'USDC' | 'USDT'
 
