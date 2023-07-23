@@ -202,7 +202,7 @@ export default function Home() {
               console.log('need to swap')
               status = {
                 status: 'fail',
-                error: 'Incorrect asset',
+                error: 'Incorrect asset, the recipient prefers ' + preferredAsset.symbol,
                 suggestion: {
                   description: `To complete this transaction, swap ${paymentAsset} to ${preferredAsset.symbol}`,
                   actionText: 'Swap and send',
@@ -327,7 +327,7 @@ export default function Home() {
               console.log('incorrect chain -- need to bridge')
               status = {
                 status: 'fail',
-                error: 'Incorrect asset',
+                error: 'The asset is on the wrong chain, the recipient prefers ' + preferredAsset.chain,
                 suggestion: {
                   description: `To complete this transaction, bridge from ${(await getChainDetails()).chain.name.toLowerCase()} to ${
                     preferredAsset.chain
