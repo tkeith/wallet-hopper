@@ -42,24 +42,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       withCredentials: true,
     })
 
-    const tokenURI = airstackRes.data.data.TokenBalances.TokenBalance[0].tokenNfts.tokenURI
-    const pointerIndex = tokenURI.indexOf('&pointer=') + '&pointer='.length
-    const pointerValue = tokenURI.substring(pointerIndex)
+    console.log('airstackRes.data', airstackRes.data)
+
     let data: string = '{}'
 
-    if (pointerValue.startsWith('data:')) {
-      // return the raw data
-      data = pointerValue.substring('data:'.length)
-    } else if (pointerValue.startsWith('ipfs:')) {
-      // fetch the data from ipfs
-      const ipfsHash = pointerValue.substring('ipfs:'.length)
-      const ipfsRes = await axios({
-        method: 'get',
-        url: `https://ipfs.io/ipfs/${ipfsHash}/data.txt`,
-        transformResponse: (r) => r,
-      })
-      const text = ipfsRes.data
-      data = text
+    if (airstackRes.data.data.TokenBalances.TokenBalance && airstackRes.data.data.TokenBalances.TokenBalance.length > 0) {
+      const tokenURI = airstackRes.data.data.TokenBalances.TokenBalance[0].tokenNfts.tokenURI
+      const pointerIndex = tokenURI.indexOf('&pointer=') + '&pointer='.length
+      const pointerValue = tokenURI.substring(pointerIndex)
+      if (pointerValue.startsWith('data:')) {
+        // return the raw data
+        data = pointerValue.substring('data:'.length)
+      } else if (pointerValue.startsWith('ipfs:')) {
+        // fetch the data from ipfs
+        const ipfsHash = pointerValue.substring('ipfs:'.length)
+        const ipfsRes = await axios({
+          method: 'get',
+          url: `https://ipfs.io/ipfs/${ipfsHash}/data.txt`,
+          transformResponse: (r) => r,
+        })
+        const text = ipfsRes.data
+        data = text
+      }
     }
 
     res.json({ data: data })
