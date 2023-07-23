@@ -52,6 +52,8 @@ export default function Home() {
   const [paymentAsset, setPaymentAsset] = useState<AssetType>('WETH')
   const [paymentAmount, setPaymentAmount] = useState('')
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus | null>(null)
+  const [isCheckLoading, setIsCheckLoading] = useState(false)
+  const [isTxnLoading, setIsTxnLoading] = useState(false)
 
   const getChainDetails = memoizeAsync(async function () {
     const walletClient = createWalletClient({
@@ -144,6 +146,7 @@ export default function Home() {
 
   const checkValidity = async () => {
     ;(async function () {
+      setIsCheckLoading(true)
       let status: TransactionStatus | null = null
 
       const response = await axios.get('/api/wallet-meta', {
@@ -281,16 +284,20 @@ export default function Home() {
 
                     let txnHash
                     try {
-                      txnHash = await(await getChainDetails()).walletClient.writeContract({
+                      txnHash = await (
+                        await getChainDetails()
+                      ).walletClient.writeContract({
                         account: (await getChainDetails()).address,
                         address: zkbobDirectDepositContractAddress, // zkbob direct deposit contract
                         abi: ZKBOB_DIRECT_DEPOSIT_ABI,
-                        chain: CHAINS[await(await getChainDetails()).walletClient.getChainId()],
+                        chain: CHAINS[await (await getChainDetails()).walletClient.getChainId()],
                         // @ts-ignore
                         functionName: 'directDeposit',
                         args: [
                           // fallbackUser
-                          (await getChainDetails()).address,
+                          (
+                            await getChainDetails()
+                          ).address,
                           // amount
                           paymentAmount,
                           // zkAddress
@@ -335,11 +342,13 @@ export default function Home() {
                     await approve(TOKEN_ADDRESS_BY_SYMBOL[paymentAsset][(await getChainDetails()).chain.name.toLowerCase()], acrossBridgeAddress)
                     let txnHash
                     try {
-                      txnHash = await(await getChainDetails()).walletClient.writeContract({
+                      txnHash = await (
+                        await getChainDetails()
+                      ).walletClient.writeContract({
                         account: (await getChainDetails()).address,
                         address: acrossBridgeAddress, // across bridge
                         abi: SPOKEPOOL_ABI,
-                        chain: CHAINS[await(await getChainDetails()).walletClient.getChainId()],
+                        chain: CHAINS[await (await getChainDetails()).walletClient.getChainId()],
                         // @ts-ignore
                         functionName: 'deposit',
                         args: [
@@ -407,6 +416,8 @@ export default function Home() {
       } else {
         alert('unknown error')
       }
+
+      setIsCheckLoading(false)
     })()
   }
 
@@ -438,7 +449,7 @@ export default function Home() {
         </div>
 
         <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={checkValidity}>
-          Check transaction validity
+          {isCheckLoading ? 'Loading...' : 'Check transaction validity'}
         </button>
 
         {transactionStatus && (
@@ -449,8 +460,12 @@ export default function Home() {
                 <p>{transactionStatus.suggestion.description}</p>
                 <button
                   className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded my-1"
-                  onClick={transactionStatus.suggestion.actionFunction}>
-                  {transactionStatus.suggestion.actionText}
+                  onClick={async function () {
+                    setIsTxnLoading(true)
+                    await transactionStatus.suggestion!.actionFunction()
+                    setIsTxnLoading(false)
+                  }}>
+                  {isTxnLoading ? 'Loading...' : transactionStatus.suggestion.actionText}
                 </button>
               </div>
             )}
