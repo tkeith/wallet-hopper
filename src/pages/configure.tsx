@@ -8,12 +8,17 @@ import { walletHopperABI, walletHopperAddress } from 'abis'
 import * as chains from 'viem/chains'
 import Modal from 'react-modal'
 import TabSet from 'components/TabSet'
+import * as misc from '../misc'
+import { configureChains } from 'wagmi'
+import { alchemyProvider } from 'wagmi/providers/alchemy'
 
 // Modal.setAppElement('#root')
 
 export const CHAINS: Record<number, chains.Chain> = {
   [137]: chains.polygon,
   [1]: chains.mainnet,
+  [1101]: chains.polygonZkEvm,
+  [100]: chains.gnosis,
 }
 
 type AsyncFunction<TArgs extends any[], TResult> = (...args: TArgs) => Promise<TResult>
@@ -50,10 +55,14 @@ const RecipientPreferences: React.FC = () => {
     const chain = CHAINS[chainId]
 
     const publicClient = () =>
-      createPublicClient({
-        chain: chain,
-        transport: http(),
-      })
+      configureChains([chain], [alchemyProvider({ apiKey: 'wFen0yW-EwjPyr49Cyg2x2nNARSt7Os0' })]).publicClient({ chainId: chainId })
+
+    // createPublicClient({
+    //   chain: chain,
+    //   transport: http(),
+    // })
+
+    // configureChains(
 
     const contractAddress = (walletHopperAddress as Record<number, `0x${string}`>)[chainId]
     if (!contractAddress) {

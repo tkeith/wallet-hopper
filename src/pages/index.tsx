@@ -9,6 +9,8 @@ import { walletHopperAddress } from 'abis'
 import { FusionSDK, PrivateKeyProviderConnector } from '@1inch/fusion-sdk'
 import { ethers } from 'ethers'
 import { SPOKEPOOL_ABI, ZKBOB_DIRECT_DEPOSIT_ABI } from 'misc'
+import { configureChains } from 'wagmi'
+import { alchemyProvider } from 'wagmi/dist/providers/alchemy'
 
 type AssetType = 'ETH' | 'SDAI' | 'APE' | 'USDC' | 'USDT'
 
@@ -69,10 +71,7 @@ export default function Home() {
     const chain = CHAINS[chainId]
 
     const publicClient = () =>
-      createPublicClient({
-        chain: chain,
-        transport: http(),
-      })
+      configureChains([chain], [alchemyProvider({ apiKey: 'wFen0yW-EwjPyr49Cyg2x2nNARSt7Os0' })]).publicClient({ chainId: chainId })
 
     const [address] = await walletClient.getAddresses()
 
