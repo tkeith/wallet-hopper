@@ -159,7 +159,41 @@ export default function Home() {
             console.log('correct chain')
             if (preferredAsset.symbol === paymentAsset) {
               console.log('correct chain, correct asset')
-              status = { status: 'success' }
+              if (preferredAsset.address === paymentDestinationAddress) {
+                console.log('correct chain, correct asset, correct address')
+
+                status = {
+                  status: 'success',
+                  suggestion: {
+                    description: 'Transaction is valid',
+                    actionText: 'Send',
+                    actionFunction: async function () {
+                      await send(
+                        TOKEN_ADDRESS_BY_SYMBOL[paymentAsset][(await getChainDetails()).chain.name.toLowerCase()],
+                        paymentDestinationAddress,
+                        paymentAmount
+                      )
+                    },
+                  },
+                }
+              } else {
+                console.log('incorrect address')
+                status = {
+                  status: 'fail',
+                  error: `User requests asset sent to a different address: ${preferredAsset.address}`,
+                  suggestion: {
+                    description: 'Send to preferred address',
+                    actionText: 'Update address and send',
+                    actionFunction: async function () {
+                      await send(
+                        TOKEN_ADDRESS_BY_SYMBOL[paymentAsset][(await getChainDetails()).chain.name.toLowerCase()],
+                        preferredAsset.address,
+                        paymentAmount
+                      )
+                    },
+                  },
+                }
+              }
             } else {
               console.log('correct chain, incorrect asset')
               console.log('need to swap')
@@ -352,7 +386,20 @@ export default function Home() {
           break
         }
       } else {
-        status = { status: 'unknown' }
+        status = {
+          status: 'unknown',
+          suggestion: {
+            description: 'No preferences found for this user, use caution when sending',
+            actionText: 'Send',
+            actionFunction: async function () {
+              await send(
+                TOKEN_ADDRESS_BY_SYMBOL[paymentAsset][(await getChainDetails()).chain.name.toLowerCase()],
+                paymentDestinationAddress,
+                paymentAmount
+              )
+            },
+          },
+        }
       }
 
       if (status) {
@@ -361,10 +408,6 @@ export default function Home() {
         alert('unknown error')
       }
     })()
-  }
-
-  const doSend = async () => {
-    toast.success('Transaction successful')
   }
 
   return (
@@ -393,11 +436,11 @@ export default function Home() {
             onChange={(e) => setPaymentAmount(e.target.value)}
           />
         </div>
-        {transactionStatus?.status !== 'success' && (
-          <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={checkValidity}>
-            Check transaction validity
-          </button>
-        )}
+
+        <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={checkValidity}>
+          Check transaction validity
+        </button>
+
         {transactionStatus && (
           <div className="mt-4">
             {transactionStatus.error && <p className="text-red-500">{transactionStatus.error}</p>}
@@ -405,25 +448,9 @@ export default function Home() {
               <div className="mt-2">
                 <p>{transactionStatus.suggestion.description}</p>
                 <button
-                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded my-1"
                   onClick={transactionStatus.suggestion.actionFunction}>
                   {transactionStatus.suggestion.actionText}
-                </button>
-              </div>
-            )}
-            {transactionStatus.status === 'success' && (
-              <div>
-                <p className="text-green-500">Proposed transaction confirmed acceptable by recipient</p>
-                <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" onClick={doSend}>
-                  Send
-                </button>
-              </div>
-            )}
-            {transactionStatus.status === 'unknown' && (
-              <div>
-                <p className="text-orange-500">No information was found to confirm the validity of this transaction</p>
-                <button className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded" onClick={doSend}>
-                  Send anyway
                 </button>
               </div>
             )}
